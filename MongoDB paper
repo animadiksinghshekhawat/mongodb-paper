@@ -1,0 +1,512 @@
+Scenario A1: Online Store Inventory Update
+
+Database: shopDB
+
+Collection: products
+
+Step 1. Insert sample data
+
+use shopDB
+db.products.insertMany([
+  {
+    _id: 1,
+    name: "Wireless Mouse",
+    category: "Accessories",
+    price: 800,
+    stock: 50,
+    discontinued: false,
+    oldCode: "WM-01"
+  },
+  {
+    _id: 2,
+    name: "Keyboard",
+    category: "Accessories",
+    price: 1500,
+    stock: 30,
+    discontinued: false,
+    oldCode: "KB-02"
+  },
+  {
+    _id: 3,
+    name: "USB Cable",
+    category: "Accessories",
+    price: 200,
+    stock: 100,
+    discontinued: false
+  },
+  {
+    _id: 4,
+    name: "Laptop",
+    category: "Computers",
+    price: 55000,
+    stock: 10,
+    discontinued: false
+  },
+  {
+    _id: 5,
+    name: "Monitor",
+    category: "Computers",
+    price: 12000,
+    stock: 15,
+    discontinued: false
+  },
+  {
+    _id: 6,
+    name: "Old Floppy Drive",
+    category: "Computers",
+    price: 300,
+    stock: 0,
+    discontinued: true
+  },
+  {
+    _id: 7,
+    name: "Dial-up Modem",
+    category: "Computers",
+    price: 500,
+    stock: 0,
+    discontinued: true
+  },
+  {
+    _id: 8,
+    name: "CD Drive",
+    category: "Computers",
+    price: 400,
+    stock: 0,
+    discontinued: true
+  }
+])
+
+Step 2. Change Keyboard price using $set
+
+db.products.updateOne(
+  { name: "Keyboard" },
+  { $set: { price: 1400 } }
+)
+
+Expected result:
+
+* matchedCount: 1
+* modifiedCount: 1
+* Keyboard price becomes 1400.
+
+Step 3. Increase Wireless Mouse stock using $inc
+
+db.products.updateOne(
+  { name: "Wireless Mouse" },
+  { $inc: { stock: 25 } }
+)
+
+Expected result:
+
+Stock changes from 50 to 75.
+
+Step 4. Remove oldCode using $unset
+
+db.products.updateMany(
+  {},
+  { $unset: { oldCode: "" } }
+)
+
+Expected result:
+
+* matchedCount: 8
+* modifiedCount: 2
+
+Only Mouse and Keyboard contained oldCode.
+
+Step 5. Replace complete document using replaceOne()
+
+db.products.replaceOne(
+  { _id: 3 },
+  {
+    _id: 3,
+    name: "USB-C Cable",
+    category: "Accessories",
+    price: 350,
+    stock: 100,
+    discontinued: false
+  }
+)
+
+Expected result:
+
+* matchedCount: 1
+* modifiedCount: 1
+
+Check:
+
+db.products.findOne({ _id: 3 })
+
+Output:
+
+{
+  _id: 3,
+  name: "USB-C Cable",
+  category: "Accessories",
+  price: 350,
+  stock: 100,
+  discontinued: false
+}
+
+Step 6. Delete one product using deleteOne()
+
+db.products.deleteOne(
+  { name: "Old Floppy Drive" }
+)
+
+Expected result:
+
+{ acknowledged: true, deletedCount: 1 }
+
+Step 7. Delete all discontinued products using deleteMany()
+
+db.products.deleteMany(
+  { discontinued: true }
+)
+
+Expected result:
+
+{ acknowledged: true, deletedCount: 2 }
+
+Check remaining documents:
+
+db.products.countDocuments()
+
+Output:
+
+5
+
+Step 8. Aggregation – Stock summary per category
+
+db.products.aggregate([
+  {
+    $match: {
+      price: { $gte: 500 }
+    }
+  },
+  {
+    $group: {
+      _id: "$category",
+      totalStock: { $sum: "$stock" },
+      avgPrice: { $avg: "$price" }
+    }
+  },
+  {
+    $sort: {
+      totalStock: -1
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      category: "$_id",
+      totalStock: 1,
+      avgPrice: 1
+    }
+  }
+])
+
+Expected output
+
+[
+  {
+    category: "Accessories",
+    totalStock: 105,
+    avgPrice: 1100
+  },
+  {
+    category: "Computers",
+    totalStock: 25,
+    avgPrice: 33500
+  }
+]
+
+Important: $match filters, $group calculates, $sum adds, $avg calculates average, and $sort: -1 sorts in descending order.
+
+Scenario A3: Employee Directory – Indexing
+
+Database: companyDB
+
+Collection: employees
+
+Step 1. Insert sample data
+
+use companyDB
+db.employees.insertMany([
+  {
+    _id: 1,
+    name: "Anil",
+    dept: "IT",
+    city: "Chennai",
+    salary: 60000,
+    skills: ["MongoDB", "Python"]
+  },
+  {
+    _id: 2,
+    name: "Bhavana",
+    dept: "HR",
+    city: "Mumbai",
+    salary: 45000,
+    skills: ["Excel", "Communication"]
+  },
+  {
+    _id: 3,
+    name: "Charan",
+    dept: "IT",
+    city: "Chennai",
+    salary: 75000,
+    skills: ["Java", "MongoDB"]
+  },
+  {
+    _id: 4,
+    name: "Deepa",
+    dept: "Finance",
+    city: "Pune",
+    salary: 52000,
+    skills: ["Excel", "Tally"]
+  },
+  {
+    _id: 5,
+    name: "Elan",
+    dept: "IT",
+    city: "Bengaluru",
+    salary: 68000,
+    skills: ["Python", "Docker"]
+  },
+  {
+    _id: 6,
+    name: "Farida",
+    dept: "HR",
+    city: "Delhi",
+    salary: 48000,
+    skills: ["Communication", "Recruitment"]
+  },
+  {
+    _id: 7,
+    name: "Gokul",
+    dept: "Finance",
+    city: "Chennai",
+    salary: 58000,
+    skills: ["Tally", "Excel"]
+  },
+  {
+    _id: 8,
+    name: "Hema",
+    dept: "IT",
+    city: "Pune",
+    salary: 82000,
+    skills: ["MongoDB", "Kubernetes"]
+  }
+])
+
+Task 1. Check performance without an index
+
+Find all employees in the IT department.
+
+db.employees.find({ dept: "IT" })
+
+Use explain:
+
+db.employees.find({ dept: "IT" })
+.explain("executionStats")
+
+Expected output:
+
+winningPlan.stage: "COLLSCAN"
+nReturned: 4
+totalKeysExamined: 0
+totalDocsExamined: 8
+
+Explanation: COLLSCAN means MongoDB scans all 8 documents to find 4 IT employees.
+
+Task 2. Create a single-field index
+
+Create an index on department.
+
+db.employees.createIndex({ dept: 1 })
+
+Expected output:
+
+"dept_1"
+
+Run explain again:
+
+db.employees.find({ dept: "IT" })
+.explain("executionStats")
+
+Expected output:
+
+winningPlan.stage: "FETCH"
+winningPlan.inputStage.stage: "IXSCAN"
+nReturned: 4
+totalKeysExamined: 4
+totalDocsExamined: 4
+
+Explanation:
+
+* IXSCAN means index scan.
+* MongoDB uses the department index.
+* Only 4 matching documents are examined instead of all 8.
+
+Task 3. Create a compound index
+
+Create an index on department ascending and salary descending.
+
+db.employees.createIndex({
+  dept: 1,
+  salary: -1
+})
+
+Expected index name:
+
+"dept_1_salary_-1"
+
+Find IT employees sorted by highest salary first:
+
+db.employees.find(
+  { dept: "IT" }
+).sort(
+  { salary: -1 }
+)
+
+Expected output:
+
+Hema       82000
+Charan     75000
+Elan       68000
+Anil       60000
+
+Check execution plan:
+
+db.employees.find(
+  { dept: "IT" }
+).sort(
+  { salary: -1 }
+).explain("executionStats")
+
+Expected:
+
+* IXSCAN
+* Index name: dept_1_salary_-1
+* No SORT stage is needed.
+
+Important: In a compound index, put the equality field first and the sorting field next.
+
+Task 4. Create a multikey index on skills
+
+Create an index on the skills array.
+
+db.employees.createIndex({ skills: 1 })
+
+Expected output:
+
+"skills_1"
+
+Find employees who know MongoDB.
+
+db.employees.find({
+  skills: "MongoDB"
+})
+
+Expected employees:
+
+* Anil
+* Charan
+* Hema
+
+Check execution statistics:
+
+db.employees.find({
+  skills: "MongoDB"
+}).explain("executionStats")
+
+Expected:
+
+winningPlan.inputStage.stage: "IXSCAN"
+isMultiKey: true
+nReturned: 3
+totalKeysExamined: 3
+totalDocsExamined: 3
+
+Explanation: A multikey index is automatically created when an index is made on an array field.
+
+Task 5. Hide and unhide an index
+
+Hide the skills index.
+
+db.employees.hideIndex("skills_1")
+
+Expected:
+
+{ hidden_old: false, hidden_new: true, ok: 1 }
+
+Run the query again:
+
+db.employees.find({
+  skills: "MongoDB"
+}).explain("executionStats")
+
+Expected:
+
+* COLLSCAN
+* totalDocsExamined: 8
+* nReturned: 3
+
+Now unhide the index.
+
+db.employees.unhideIndex("skills_1")
+
+Run explain again:
+
+db.employees.find({
+  skills: "MongoDB"
+}).explain("executionStats")
+
+Expected: IXSCAN is used again.
+
+Explanation: A hidden index exists in the database but MongoDB’s query planner does not use it.
+
+Task 6. Create a unique index
+
+First, try creating a unique index on city.
+
+db.employees.createIndex(
+  { city: 1 },
+  { unique: true }
+)
+
+Expected result: Error.
+
+Reason: Multiple employees have the same city.
+
+For example:
+
+* Chennai occurs 3 times.
+* Pune occurs 2 times.
+
+Now create a unique index on name.
+
+db.employees.createIndex(
+  { name: 1 },
+  { unique: true }
+)
+
+Expected output:
+
+"name_1"
+
+Explanation: All employee names are unique, so MongoDB allows the unique index.
+
+Task 7. List all indexes
+
+db.employees.getIndexes()
+
+This displays all indexes created in the collection.
+
+Expected index names:
+
+* _id_
+* dept_1
+* dept_1_salary_-1
+* skills_1
+* name_1
